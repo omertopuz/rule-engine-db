@@ -1,5 +1,6 @@
 package com.rules.model.entity;
 
+import com.rules.config.RuleRepoEventListener;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,6 +16,7 @@ import java.util.Date;
 @Setter
 @Data
 @Entity
+@EntityListeners(RuleRepoEventListener.class)
 public class RuleContent {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -33,4 +35,15 @@ public class RuleContent {
     private Date lastModifiedDate;
     @LastModifiedBy
     private String modifiedBy;
+
+    @Override
+    public boolean equals(Object o) {
+        RuleContent that = (RuleContent) o;
+        return ruleId == that.getRuleId();
+    }
+
+    @Override
+    public int hashCode() {
+        return ruleId;
+    }
 }
