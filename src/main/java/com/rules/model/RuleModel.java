@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,6 +43,12 @@ public class RuleModel {
         return Optional.ofNullable(val)
                 .map(v-> (Map<String, Object>)val)
                 .orElseThrow(()->new RuntimeException(val + " is null. Can not be converted to map"));
+    }
+
+    public static <T> List<T> toList(Object val){
+        return Optional.ofNullable(val)
+                .map(v-> (List<T>)val)
+                .orElseThrow(()->new RuntimeException(val + " is null. Can not be converted to list"));
     }
 
     public Object get(String key){

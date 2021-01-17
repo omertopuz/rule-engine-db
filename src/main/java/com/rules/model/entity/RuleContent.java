@@ -27,6 +27,10 @@ public class RuleContent {
     @Lob
     private String ruleContent;
 
+    private String mainObjectName;
+    private String mainObjectPackageName;
+    private String returnObjectName;
+
     @CreatedDate
     private Date createdDate;
     @CreatedBy

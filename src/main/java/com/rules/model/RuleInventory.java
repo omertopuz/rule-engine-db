@@ -10,6 +10,7 @@ import org.kie.api.builder.KieRepository;
 import org.kie.api.builder.Message;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
+import org.kie.api.runtime.StatelessKieSession;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,7 +19,7 @@ import java.util.Map;
 @Setter
 public class RuleInventory {
 
-    private Map<RuleContent,KieSession> allRules;
+    private Map<RuleContent, StatelessKieSession> allRules;
     private static String RESOURCE_FOLDER_PATH = "src/main/resources/";
 
     public RuleInventory() {
@@ -46,7 +47,7 @@ public class RuleInventory {
 
     public void reloadRule(RuleContent rule){
         getAllRules().put(rule,
-                loadContainerFromString(rule.getRuleContent()).newKieSession());
+                loadContainerFromString(rule.getRuleContent()).newStatelessKieSession());
     }
 
 }
