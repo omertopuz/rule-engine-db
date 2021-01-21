@@ -30,6 +30,7 @@ public class RuleContent {
     private String mainObjectName;
     private String mainObjectPackageName;
     private String returnObjectName;
+    private String returnObjectPackageName;
 
     @CreatedDate
     private Date createdDate;

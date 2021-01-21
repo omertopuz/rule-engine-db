@@ -1,15 +1,20 @@
 package com.rules.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rules.exception.RuleEngineApiException;
 import com.rules.model.RuleInventory;
 import com.rules.model.entity.RuleContent;
 import com.rules.repository.RuleRepository;
 import lombok.extern.java.Log;
+import org.kie.api.KieBase;
 import org.kie.api.definition.type.FactType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -37,30 +42,46 @@ public class RuleService {
         .ifPresent(kc-> kc.getValue().execute(rulableObject));
     }
 
-    public Object fireRuleDeclaredType(int ruleId, Map<String,Object> keyValue){
+    public Object fireRuleDeclaredType(int ruleId, String jsonPayLoad){
         return ruleInventory.getAllRules().entrySet().stream()
                 .filter(p->p.getKey().getRuleId() == ruleId)
         .findFirst()
         .map(kc-> {
-            FactType mainObjectFact = kc.getValue().getKieBase()
-                    .getFactType(kc.getKey().getMainObjectPackageName()
-                            , kc.getKey().getMainObjectName());
 
-            Object mainObject = null;
-            try {
-                mainObject = mainObjectFact.newInstance();
-            } catch (InstantiationException e) {
-                throw new RuleEngineApiException(e.getMessage());
-            } catch (IllegalAccessException e) {
-                throw new RuleEngineApiException(e.getMessage());
-            }
+            Object mainObject = createFactInstance(kc.getValue().getKieBase()
+                    ,kc.getKey().getMainObjectPackageName()
+            ,kc.getKey().getMainObjectName(), jsonPayLoad);
+            Object returnObject = createFactInstance(kc.getValue().getKieBase()
+                    ,kc.getKey().getReturnObjectPackageName()
+            ,kc.getKey().getReturnObjectName(), null);
 
-            mainObjectFact.setFromMap(mainObject,keyValue);
-
-            kc.getValue().execute(mainObject);
-            return mainObject;
+            kc.getValue().execute(Arrays.asList(mainObject,returnObject));
+            return returnObject;
         });
     }
 
+    private Object createFactInstance(KieBase kb, String pack, String objName, String jsonStr){
+        FactType mainObjectFact = kb.getFactType(pack, objName);
+        Object factInstance;
+        try {
+            factInstance = mainObjectFact.newInstance();
+        } catch (InstantiationException e) {
+            throw new RuleEngineApiException(e.getMessage());
+        } catch (IllegalAccessException e) {
+            throw new RuleEngineApiException(e.getMessage());
+        }
+
+        if(jsonStr != null){
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                factInstance = mapper.readValue(jsonStr, factInstance.getClass());
+            } catch (JsonMappingException e) {
+                throw new RuleEngineApiException(e.getMessage());
+            } catch (JsonProcessingException e) {
+                throw new RuleEngineApiException(e.getMessage());
+            }
+        }
+        return factInstance;
+    }
 
 }

@@ -4,25 +4,23 @@ import com.rules.model.Criminal;
 import com.rules.model.RuleInventory;
 import com.rules.model.RuleModel;
 import com.rules.service.RuleService;
+import org.drools.core.event.DefaultAgendaEventListener;
 import org.junit.jupiter.api.Test;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.KieRepository;
-import org.kie.api.builder.Message;
 import org.kie.api.definition.type.FactType;
+import org.kie.api.event.rule.AfterMatchFiredEvent;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.api.runtime.StatelessKieSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -110,6 +108,34 @@ class RuleEngineTest {
     }
 
     @Test
+    void test_StatelessKieSession_DynamicRuleTypeCastingWithSharp(){
+
+        RuleModel r = new RuleModel();
+        Map<String,Object> fields = new HashMap<>();
+        int price = 100;
+        fields.put("price",price);
+        fields.put("destination","A");
+        fields.put("customerType","VIP");
+        r.setFields(fields);
+
+
+        String rule = "package com.genericrule import static com.rules.model.RuleModel.*; import com.rules.model.RuleModel; rule \"rule4\" no-loop true lock-on-active true salience 1 when $s : RuleModel(fields[\"customerType\"] == \"VIP\", $prc : fields[\"price\"]#Integer ) then $s.put(\"price\", $prc * 2); update($s); end;";
+
+        StatelessKieSession sks = RuleInventory.loadContainerFromString(rule).newStatelessKieSession();
+
+        sks.addEventListener( new DefaultAgendaEventListener() {
+            public void afterMatchFired(AfterMatchFiredEvent event) {
+                super.afterMatchFired( event );
+                System.out.println( event );
+            }
+        });
+
+        sks.execute(r);
+
+        assertThat(r.getFields().get("price")).isEqualTo(price * 2);
+    }
+
+    @Test
     void test_StatelessKieSession_DynamicRuleNestedObjects(){
 
         RuleModel r = new RuleModel();
@@ -149,57 +175,6 @@ class RuleEngineTest {
 
         assertThat(r.getFields().get("discount")).isNotNull();
         assertThat(r.getFields().get("discount")).isEqualTo(5);
-    }
-
-    @Test
-    void test_StatelessKieSession_DynamicRuleNestedObjects_DeclaredVariables(){
-
-        Map<String,Object> fields = new HashMap<>();
-        Map<String,Object> server = new HashMap<>();
-        server.put("name","server001");
-        server.put("processors",4);
-        server.put("memory",8192);
-        server.put("diskSpace",128);
-        server.put("cpuUsage",3);
-        List<Map<String,Object>> virtualizationList = new ArrayList<>();
-        for (int i = 1; i < 4; i++) {
-            Map<String,Object> v = new HashMap<>();
-            v.put("name","virtualization - " + i);
-            v.put("diskSpace",4 * i);
-            v.put("memory",1024 * i);
-            virtualizationList.add(v);
-        }
-
-
-        server.put("virtualizations ",virtualizationList);
-        fields.put("Server",server);
-
-        String packageName = "com.genericrule";
-        String mainObjectName = "Server";
-
-        String rule = "package com.genericrule import java.util.List; declare Server name : String processors : int memory : int diskSpace : int virtualizations : List cpuUsage : int ruleMessage : String end; declare Virtualization name : String diskSpace : int memory : int end; rule \"check minimum server configuration\" dialect \"mvel\" when $server : Server(processors < 2 || memory <= 1024 || diskSpace <= 250 ) then $server.ruleMessage = $server.name + \" was rejected by don't apply the minimum configuration.\"; end;";
-
-        StatelessKieSession sks = RuleInventory.loadContainerFromString(rule).newStatelessKieSession();
-
-        FactType mainObjectFact = sks.getKieBase()
-                .getFactType(packageName,mainObjectName);
-
-        Object mainObject = null;
-        try {
-            mainObject = mainObjectFact.newInstance();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
-
-        mainObjectFact.setFromMap(mainObject,fields);
-
-        sks.execute(mainObject);
-
-        String msg = (String) mainObjectFact.get(mainObject,"ruleMessage");
-        assertThat(msg).isNotNull();
-        assertThat(msg).contains("rejected");
     }
 
     @Test

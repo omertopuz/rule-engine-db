@@ -1,0 +1,31 @@
+package com.genericrule
+
+declare CheckApplyConditions
+	programId : int
+	isActive : boolean
+	programStateId : int
+end
+
+declare CheckApplyResponse
+	eligibleForApplication : boolean @position(0)
+	message : String @position(1)
+end
+
+declare RequestModel
+	programsList : CheckApplyConditions[]
+end
+
+rule "On going or failed applies"
+    no-loop true
+    lock-on-active true
+    when
+        $req: RequestModel(programsList.length>0)
+    	exists(CheckApplyConditions(programStateId == 2, programId == 35) from $req.getProgramsList())
+    	$res: CheckApplyResponse()
+    then
+        modify($res){setMessage("On going or failed apply in ")
+        ,setEligibleForApplication(false)};
+end
+
+
+

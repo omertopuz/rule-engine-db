@@ -1,5 +1,6 @@
 package com.rules.model;
 
+import com.rules.config.DroolsCustomEventListener;
 import com.rules.model.entity.RuleContent;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,8 +22,10 @@ public class RuleInventory {
 
     private Map<RuleContent, StatelessKieSession> allRules;
     private static String RESOURCE_FOLDER_PATH = "src/main/resources/";
+    private final DroolsCustomEventListener eventListener;
 
-    public RuleInventory() {
+    public RuleInventory(DroolsCustomEventListener eventListener) {
+        this.eventListener = eventListener;
         allRules = new HashMap<>();
     }
 
@@ -46,8 +49,9 @@ public class RuleInventory {
     }
 
     public void reloadRule(RuleContent rule){
-        getAllRules().put(rule,
-                loadContainerFromString(rule.getRuleContent()).newStatelessKieSession());
+        StatelessKieSession sks = loadContainerFromString(rule.getRuleContent()).newStatelessKieSession();
+        sks.addEventListener(eventListener);
+        getAllRules().put(rule, sks);
     }
 
 }

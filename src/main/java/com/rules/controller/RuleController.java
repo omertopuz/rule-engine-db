@@ -17,4 +17,9 @@ public class RuleController {
     public void executeRule(@RequestBody RuleModel request, @PathVariable int ruleId){
         ruleService.fireRule(ruleId,request);
     }
+
+    @PostMapping(value = "/rules/declared-type/{ruleId}", consumes = "text/plain")
+    public Object executeDeclaredTypeRule(@RequestBody String payload, @PathVariable int ruleId){
+        return ruleService.fireRuleDeclaredType(ruleId,payload);
+    }
 }
