@@ -1,9 +1,20 @@
 package com.genericrule
 
+import java.util.List;
+import java.util.Date;
+import java.util.Calendar;
+
+function boolean isBeforeOneOrMoreYears(Date d){
+    Calendar c = Calendar.getInstance();
+    c.add(Calendar.YEAR,-1);
+    return c.getTime().after(d);
+}
+
 declare CheckApplyConditions
-	programId : int
+	applyId : int
 	isActive : boolean
-	programStateId : int
+	stateId : int
+	completionDate : Date
 end
 
 declare CheckApplyResponse
@@ -18,14 +29,57 @@ end
 rule "On going or failed applies"
     no-loop true
     lock-on-active true
+    salience 10
     when
         $req: RequestModel(programsList.length>0)
-    	exists(CheckApplyConditions(programStateId == 2, programId == 35) from $req.getProgramsList())
+        $l: List(size>0) from collect (CheckApplyConditions(stateId == 2
+                    || stateId == 12) from $req.getProgramsList())
+
+        $s : String($l.size() > 0 ) from accumulate ( $val:CheckApplyConditions() from $l,
+                    init( String total = "There exist ongoing or failed ones in your former applications. details below; "; ),
+                    action( total += "\nApply Id: " + $val.getApplyId() + ", stateId: " +  $val.getStateId(); ),
+                    result( total ))
     	$res: CheckApplyResponse()
     then
-        modify($res){setMessage("On going or failed apply in ")
-        ,setEligibleForApplication(false)};
-end
+        modify($res){setMessage($s),setEligibleForApplication(false)};
+end;
+
+rule "On process applies"
+    no-loop true
+    lock-on-active true
+    salience 9
+    when
+        $req: RequestModel(programsList.length>0)
+        $l: List(size>0) from collect (CheckApplyConditions(applyId == 35
+                && (stateId == 1 || stateId == 10)) from $req.getProgramsList())
+
+        $s : String($l.size() > 0 ) from accumulate ( $val:CheckApplyConditions() from $l,
+                    init( String total = "\nThere exist one or more on process ones in your former applications. details below; "; ),
+                    action( total += "\nApply Id: " + $val.getApplyId() + ", stateId: " +  $val.getStateId(); ),
+                    result( total ))
+    	$res: CheckApplyResponse()
+    then
+        modify($res){setMessage($res.getMessage() + $s),setEligibleForApplication(false)};
+end;
+
+rule "Not passed at least 1 year or more after completion"
+    no-loop true
+    lock-on-active true
+    salience 8
+    when
+        $req: RequestModel(programsList.length>0)
+        $l: List(size>0) from collect (CheckApplyConditions(completionDate != null
+            && isBeforeOneOrMoreYears(completionDate) && stateId == 4)
+            from $req.getProgramsList())
+
+        $s : String($l.size() > 0 ) from accumulate ( $val:CheckApplyConditions() from $l,
+                    init( String total = "\nThere exist one or more 'completed and not passed at least one year yet' ones in your former applications. details below; "; ),
+                    action( total += "\nApply Id: " + $val.getApplyId() + ", stateId: " +  $val.getStateId(); ),
+                    result( total ))
+    	$res: CheckApplyResponse()
+    then
+        modify($res){setMessage($res.getMessage() + $s),setEligibleForApplication(false)};
+end;
 
 
 

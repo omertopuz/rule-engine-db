@@ -12,9 +12,7 @@ import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.StatelessKieSession;
 import org.kie.internal.io.ResourceFactory;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -76,38 +74,6 @@ class GenericRuleEngineTest {
     }
 
     @Test
-    void test_StatelessKieSession_DynamicRuleNestedObjects_DeclaredVariables_Standalone_WithDrlFile() throws Exception{
-        Map<String,Object> request =
-                Stream.of(new Object[][] {
-                        {"programsList",   //new ArrayList<>()}}
-                                Stream.of(Stream.of(new Object[][]
-                                                {{"ProgramStateId",2},{"IsActive",true},{"YDProgramId",15}}).collect(Collectors.toMap(key -> (String)key[0], val -> val[1])),
-                                        Stream.of(new Object[][]
-                                                {{"ProgramStateId",2},{"IsActive",true},{"YDProgramId",34}}).collect(Collectors.toMap(key -> (String)key[0], val -> val[1])),
-                                        Stream.of(new Object[][]
-                                                {{"ProgramStateId",2},{"IsActive",false},{"YDProgramId",35}}).collect(Collectors.toMap(key -> (String)key[0], val -> val[1]))).collect(Collectors.toList())
-                        }}
-                ).collect(Collectors.toMap(key -> (String)key[0], val -> val[1]));
-
-        String packageName = "com.genericrule";
-        String mainObjectName = "RequestModel";
-        String returnObjectName = "CheckApplyResponse";
-
-        StatelessKieSession sks = getContainer().newStatelessKieSession();
-
-        FactType mainObjectFact = sks.getKieBase().getFactType(packageName,mainObjectName);
-        Object mainObject = mainObjectFact.newInstance();
-        FactType returnObjectFact = sks.getKieBase().getFactType(packageName,returnObjectName);
-        Object returnObject = returnObjectFact.newInstance();
-
-        mainObjectFact.setFromMap(mainObject,request);
-
-        sks.execute(Arrays.asList(mainObject,returnObject));
-
-        assertThat((String) returnObjectFact.getAsMap(returnObject).get("message")).contains("going");
-    }
-
-    @Test
     void test_StatelessKieSession_DynamicRuleNestedObjects_ByUsingJson_ObjectMapper() throws Exception{
         String packageName = "com.genericrule";
         String mainObjectName = "RequestModel";
@@ -121,7 +87,7 @@ class GenericRuleEngineTest {
         Object returnObject = returnObjectFact.newInstance();
 
         ObjectMapper mapper = new ObjectMapper();
-        String json = "{\"programsList\":[{\"programStateId\":2 ,\"isActive\":true, \"programId\":15},{\"programStateId\":2 ,\"isActive\":true, \"programId\":35},{\"programStateId\":2 ,\"isActive\":true, \"programId\":34}]}";
+        String json = "{\"programsList\":[{\"stateId\":2 ,\"isActive\":true, \"applyId\":15},{\"stateId\":1 ,\"isActive\":true, \"applyId\":35},{\"stateId\":4 ,\"isActive\":true, \"applyId\":34,\"completionDate\":\"2016-01-25T21:34:55\"}]}";
 
         mainObject = mapper.readValue(json, mainObject.getClass());
 
